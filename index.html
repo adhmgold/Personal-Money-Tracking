@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PMT — Personal Money Tracker</title>
+<meta name="description" content="Personal Money Tracker by Adhmgold — track your expenses, bank and cash balances with your own private Google-signed-in page.">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1115">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PMT">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
   :root{
     --bg:#0f1115;
@@ -225,17 +234,45 @@
     </div>
     <div class="top-actions">
       <span class="sync-mini"><span class="sync-dot off" id="syncDot"></span><span id="syncStatusText">Not saved online yet</span></span>
-      <button class="btn-ghost" id="exportBtn">Export backup</button>
-      <button class="btn-ghost" id="importBtn">Import backup</button>
-      <input type="file" id="importFile" accept="application/json" style="display:none;">
-      <button class="btn-danger" id="clearBtn">Clear all</button>
       <span class="user-badge" id="userBadge">
         <img id="userAvatar" src="" alt="">
         <span class="uname" id="userName"></span>
       </span>
-      <button class="btn-ghost" id="signOutBtn">Sign out</button>
     </div>
   </header>
+
+  <div class="card">
+    <h2 id="formTitle">Add Expense</h2>
+    <form class="expense-form" id="expenseForm">
+      <div class="field">
+        <label for="amount">Amount (EGP)</label>
+        <input type="number" id="amount" step="0.01" min="0" placeholder="0.00" required>
+      </div>
+      <div class="field">
+        <label for="date">Date</label>
+        <input type="date" id="date" required>
+      </div>
+      <div class="field">
+        <label for="paymentMethod">Paid from</label>
+        <select id="paymentMethod">
+          <option value="Cash">Cash</option>
+          <option value="Bank">Bank</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="desc">Description</label>
+        <input type="text" id="desc" placeholder="e.g. Camera lens rental">
+      </div>
+      <div class="field notes">
+        <label for="notes">Notes (optional)</label>
+        <textarea id="notes" rows="2" placeholder="Any extra detail..."></textarea>
+      </div>
+      <div class="field" style="grid-column:1/-1;display:flex;gap:8px;">
+        <button type="submit" class="btn-primary" id="submitBtn">Add Expense</button>
+        <button type="button" class="btn-ghost" id="cancelEditBtn" style="display:none;">Cancel edit</button>
+      </div>
+    </form>
+  </div>
 
   <div class="card">
     <h2>Current Balances</h2>
@@ -288,52 +325,6 @@
   </div>
 
   <div class="card">
-    <h2 id="formTitle">Add Expense</h2>
-    <form class="expense-form" id="expenseForm">
-      <div class="field">
-        <label for="amount">Amount (EGP)</label>
-        <input type="number" id="amount" step="0.01" min="0" placeholder="0.00" required>
-      </div>
-      <div class="field">
-        <label for="date">Date</label>
-        <input type="date" id="date" required>
-      </div>
-      <div class="field">
-        <label for="category">Category</label>
-        <select id="category">
-          <option>Production &amp; Equipment</option>
-          <option>Software &amp; Subscriptions</option>
-          <option>Transport</option>
-          <option>Food &amp; Drink</option>
-          <option>Team &amp; Freelancers</option>
-          <option>Marketing</option>
-          <option>Utilities</option>
-          <option>Other</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="paymentMethod">Paid from</label>
-        <select id="paymentMethod">
-          <option value="Cash">Cash</option>
-          <option value="Bank">Bank</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="desc">Description</label>
-        <input type="text" id="desc" placeholder="e.g. Camera lens rental">
-      </div>
-      <div class="field notes">
-        <label for="notes">Notes (optional)</label>
-        <textarea id="notes" rows="2" placeholder="Any extra detail..."></textarea>
-      </div>
-      <div class="field" style="grid-column:1/-1;display:flex;gap:8px;">
-        <button type="submit" class="btn-primary" id="submitBtn">Add Expense</button>
-        <button type="button" class="btn-ghost" id="cancelEditBtn" style="display:none;">Cancel edit</button>
-      </div>
-    </form>
-  </div>
-
-  <div class="card">
     <h2>Breakdown by category (this month)</h2>
     <div class="breakdown-list" id="breakdownList">
       <div class="empty-state">No expenses yet this month.</div>
@@ -374,8 +365,20 @@
     <div id="tableEmptyState" class="empty-state" style="display:none;">No expenses match your filters.</div>
   </div>
 
-  <footer>Your data is saved to your own private page automatically. Use "Export backup" any time for an extra local copy.</footer>
+  <div class="card">
+    <h2>Account &amp; Backup</h2>
+    <div class="top-actions">
+      <button class="btn-ghost" id="exportBtn">Export backup</button>
+      <button class="btn-ghost" id="importBtn">Import backup</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+      <button class="btn-danger" id="clearBtn">Clear all</button>
+      <button class="btn-ghost" id="signOutBtn">Sign out</button>
+    </div>
+  </div>
+
+    <footer>Your data is saved to your own private page automatically. Use "Export backup" any time for an extra local copy.</footer>
 </div>
+
 
 <div class="toast" id="toast"></div>
 
@@ -523,7 +526,7 @@
   var form = document.getElementById('expenseForm');
   var amountEl = document.getElementById('amount');
   var dateEl = document.getElementById('date');
-  var categoryEl = document.getElementById('category');
+  var DEFAULT_CATEGORY = 'Other';
   var paymentMethodEl = document.getElementById('paymentMethod');
   var descEl = document.getElementById('desc');
   var notesEl = document.getElementById('notes');
@@ -556,7 +559,7 @@
         expenses[idx] = Object.assign({}, expenses[idx], {
           amount: amount,
           date: dateEl.value,
-          category: categoryEl.value,
+          category: expenses[idx].category || DEFAULT_CATEGORY,
           paymentMethod: method,
           desc: descEl.value.trim(),
           notes: notesEl.value.trim()
@@ -569,7 +572,7 @@
         id: uid(),
         amount: amount,
         date: dateEl.value,
-        category: categoryEl.value,
+        category: DEFAULT_CATEGORY,
         paymentMethod: method,
         desc: descEl.value.trim(),
         notes: notesEl.value.trim(),
@@ -597,7 +600,6 @@
     editingId = id;
     amountEl.value = exp.amount;
     dateEl.value = exp.date;
-    categoryEl.value = exp.category;
     paymentMethodEl.value = exp.paymentMethod || "Cash";
     descEl.value = exp.desc || "";
     notesEl.value = exp.notes || "";
@@ -932,9 +934,41 @@
 
   var isConfigured = FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== 'REPLACE_ME';
 
+  // Running inside the PMT Android app? The app's MainActivity.kt injects a
+  // JS interface called "AndroidBridge" with a signIn()/signOut() method.
+  // When present, we hand off to native Google Sign-In (a real WebView
+  // can't show Google's sign-in popup at all) and the native side calls
+  // window.onNativeGoogleSignIn(idToken) below when it's done. In a normal
+  // browser AndroidBridge doesn't exist, so we fall back to the usual
+  // popup flow — this one file works both as the website and as the app.
+  function isNativeApp(){
+    return !!(window.AndroidBridge && typeof window.AndroidBridge.signIn === 'function');
+  }
+
+  window.onNativeGoogleSignIn = function(idToken){
+    var errEl = document.getElementById('authError');
+    if(!fbAuth){ errEl.textContent = "App isn't ready yet — try again in a moment."; return; }
+    var cred = firebase.auth.GoogleAuthProvider.credential(idToken);
+    fbAuth.signInWithCredential(cred).catch(function(err){
+      errEl.textContent = "Sign-in failed: " + (err && err.message ? err.message : err);
+    });
+  };
+  window.onNativeGoogleSignInError = function(msg){
+    document.getElementById('authError').textContent = "Sign-in failed: " + msg;
+  };
+  window.onNativeGoogleSignInCancelled = function(){
+    document.getElementById('authError').textContent = "";
+  };
+
   document.getElementById('googleSignInBtn').addEventListener('click', function(){
     var errEl = document.getElementById('authError');
     errEl.textContent = '';
+
+    if(isNativeApp()){
+      window.AndroidBridge.signIn();
+      return;
+    }
+
     if(!isConfigured){
       document.getElementById('authSetupNotice').style.display = 'block';
       return;
@@ -957,6 +991,9 @@
 
   document.getElementById('signOutBtn').addEventListener('click', function(){
     if(fbAuth) fbAuth.signOut();
+    if(isNativeApp() && typeof window.AndroidBridge.signOut === 'function'){
+      window.AndroidBridge.signOut();
+    }
   });
 
   if(isConfigured && typeof firebase !== 'undefined'){
@@ -980,6 +1017,14 @@
 
   if(memoryOnly){
     showToast("Note: local caching unavailable in this browser — your data still saves online, but won't be available offline");
+  }
+
+  // Register the service worker so the app is installable (Add to Home
+  // Screen / Play Store TWA). Safe no-op if the browser doesn't support it.
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('service-worker.js').catch(function(){ /* ignore */ });
+    });
   }
 })();
 </script>
