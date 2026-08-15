@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expense Tracker</title>
+<style>
+  :root{
+    --bg:#0f1115;
+    --panel:#171a21;
+    --panel-2:#1e222b;
+    --border:#2a2f3a;
+    --text:#e8eaed;
+    --text-dim:#9aa1ab;
+    --accent:#4f8cff;
+    --accent-2:#7c5cff;
+    --green:#3ecf8e;
+    --red:#ff6b6b;
+    --amber:#ffb454;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(160deg,#0b0d11,#12151c 60%,#0f1115);
+    color:var(--text);
+    min-height:100vh;
+    padding:24px 16px 60px;
+  }
+  .wrap{max-width:1000px;margin:0 auto;}
+  header{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    margin-bottom:22px;flex-wrap:wrap;gap:12px;
+  }
+  header h1{margin:0;font-size:1.5rem;font-weight:700;letter-spacing:-0.02em;}
+  header p{margin:4px 0 0;color:var(--text-dim);font-size:0.85rem;}
+  .top-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  button{
+    font-family:inherit;cursor:pointer;border:none;border-radius:10px;
+    padding:9px 14px;font-size:0.85rem;font-weight:600;
+    transition:transform .08s ease, opacity .15s ease;
+  }
+  button:active{transform:scale(0.96);}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;}
+  .btn-ghost{background:var(--panel-2);color:var(--text);border:1px solid var(--border);}
+  .btn-ghost:hover{background:#242833;}
+  .btn-danger{background:rgba(255,107,107,0.12);color:var(--red);border:1px solid rgba(255,107,107,0.3);}
+
+  .user-badge{
+    display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--border);
+    border-radius:999px;padding:5px 12px 5px 5px;font-size:0.82rem;
+  }
+  .user-badge img{width:26px;height:26px;border-radius:50%;display:block;}
+  .user-badge .uname{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sync-mini{
+    display:inline-flex;align-items:center;gap:6px;font-size:0.75rem;color:var(--text-dim);
+    padding:6px 10px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);
+  }
+  .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--text-dim);flex-shrink:0;}
+  .sync-dot.on{background:var(--green);}
+  .sync-dot.off{background:var(--text-dim);}
+  .sync-dot.err{background:var(--red);}
+  .sync-dot.busy{background:var(--amber);}
+
+  /* ---- Sign-in gate ---- */
+  .auth-gate{
+    position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(160deg,#0b0d11,#12151c 60%,#0f1115);z-index:100;padding:20px;
+  }
+  .auth-card{
+    background:var(--panel);border:1px solid var(--border);border-radius:18px;
+    padding:40px 36px;max-width:380px;width:100%;text-align:center;
+  }
+  .auth-card .logo{font-size:2.4rem;margin-bottom:8px;}
+  .auth-card h1{font-size:1.3rem;margin:0 0 6px;}
+  .auth-card p{color:var(--text-dim);font-size:0.85rem;line-height:1.5;margin:0 0 26px;}
+  .google-btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:10px;
+    background:#fff;color:#1f1f1f;border-radius:10px;padding:11px 20px;
+    font-size:0.9rem;font-weight:600;width:100%;border:1px solid #dcdcdc;
+  }
+  .google-btn:hover{background:#f7f7f7;}
+  .google-btn svg{width:18px;height:18px;flex-shrink:0;}
+  .auth-error{color:var(--red);font-size:0.8rem;margin-top:14px;min-height:1em;}
+  .auth-setup-notice{
+    background:rgba(255,180,84,0.1);border:1px solid rgba(255,180,84,0.3);color:var(--amber);
+    border-radius:10px;padding:14px 16px;font-size:0.8rem;text-align:left;line-height:1.5;margin-top:18px;
+  }
+  .auth-setup-notice code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.75rem;}
+
+  .summary-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    gap:12px;margin-bottom:22px;
+  }
+  .stat-card{
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px 18px;
+  }
+  .stat-card .label{color:var(--text-dim);font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;}
+  .stat-card .value{font-size:1.5rem;font-weight:700;margin-top:6px;letter-spacing:-0.02em;}
+  .stat-card .sub{font-size:0.75rem;color:var(--text-dim);margin-top:4px;}
+  .value.pos{color:var(--green);}
+  .value.neg{color:var(--red);}
+
+  .card{
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px;margin-bottom:20px;
+  }
+  .card h2{margin:0 0 14px;font-size:1rem;font-weight:700;}
+
+  form.expense-form{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end;
+  }
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field label{font-size:0.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.04em;}
+  input, select, textarea{
+    background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+    border-radius:8px;padding:9px 10px;font-size:0.88rem;font-family:inherit;
+    width:100%;
+  }
+  input:focus, select:focus, textarea:focus{outline:none;border-color:var(--accent);}
+  .field.notes{grid-column:1 / -1;}
+  .field.wide{grid-column:span 2;}
+
+  .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:end;}
+  .filters .field{min-width:140px;}
+
+  table{width:100%;border-collapse:collapse;font-size:0.86rem;}
+  thead th{
+    text-align:left;color:var(--text-dim);font-weight:600;font-size:0.72rem;
+    text-transform:uppercase;letter-spacing:0.04em;padding:8px 10px;border-bottom:1px solid var(--border);
+  }
+  tbody td{padding:10px;border-bottom:1px solid var(--border);vertical-align:top;}
+  tbody tr:hover{background:rgba(255,255,255,0.02);}
+  .cat-pill{
+    display:inline-block;padding:3px 9px;border-radius:999px;font-size:0.72rem;font-weight:600;
+    background:rgba(79,140,255,0.15);color:#8fb4ff;border:1px solid rgba(79,140,255,0.3);
+  }
+  .amount{font-weight:700;color:var(--red);}
+  .row-actions{display:flex;gap:6px;}
+  .row-actions button{padding:5px 9px;font-size:0.72rem;}
+  .empty-state{text-align:center;color:var(--text-dim);padding:40px 10px;font-size:0.9rem;}
+
+  .balances-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:14px;
+  }
+  .balance-tile{
+    background:var(--panel-2);border:1px solid var(--border);border-radius:12px;
+    padding:16px 18px;
+  }
+  .balance-tile.total{
+    background:linear-gradient(135deg,rgba(79,140,255,0.12),rgba(124,92,255,0.12));
+    border-color:rgba(79,140,255,0.3);
+    display:flex;flex-direction:column;justify-content:center;
+  }
+  .balance-tile .label{color:var(--text-dim);font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;}
+  .balance-tile .value{font-size:1.4rem;font-weight:700;margin-top:6px;letter-spacing:-0.02em;color:var(--green);}
+  .balance-edit{display:flex;gap:6px;margin-top:10px;}
+  .balance-edit input{flex:1;}
+  .balance-edit button{padding:8px 12px;white-space:nowrap;}
+  .method-pill{
+    display:inline-block;padding:3px 9px;border-radius:999px;font-size:0.72rem;font-weight:600;
+  }
+  .method-pill.Bank{background:rgba(79,140,255,0.15);color:#8fb4ff;border:1px solid rgba(79,140,255,0.3);}
+  .method-pill.Cash{background:rgba(62,207,142,0.15);color:#6fe0ac;border:1px solid rgba(62,207,142,0.3);}
+
+  .breakdown-list{display:flex;flex-direction:column;gap:10px;}
+  .breakdown-row{display:flex;align-items:center;gap:10px;}
+  .breakdown-row .name{width:120px;font-size:0.82rem;color:var(--text-dim);flex-shrink:0;}
+  .breakdown-row .bar-bg{flex:1;height:10px;background:var(--panel-2);border-radius:6px;overflow:hidden;}
+  .breakdown-row .bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:6px;}
+  .breakdown-row .amt{width:90px;text-align:right;font-size:0.82rem;font-weight:600;flex-shrink:0;}
+
+  footer{text-align:center;color:var(--text-dim);font-size:0.75rem;margin-top:30px;}
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+    padding:10px 18px;border-radius:10px;font-size:0.82rem;opacity:0;
+    transition:opacity .25s ease, transform .25s ease;pointer-events:none;z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  @media (max-width:720px){
+    form.expense-form{grid-template-columns:1fr 1fr;}
+    .field.wide{grid-column:span 2;}
+  }
+</style>
+</head>
+<body>
+
+<!-- Sign-in gate: shown until the visitor is authenticated with Google -->
+<div class="auth-gate" id="authGate">
+  <div class="auth-card">
+    <div class="logo">💰</div>
+    <h1>Expense Tracker</h1>
+    <p>Science Street LLC · شارع العلوم<br>Sign in with your Google account to track your own expenses. Everyone gets their own private page — no one else can see your data.</p>
+    <button type="button" class="google-btn" id="googleSignInBtn">
+      <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.5 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.4-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.5 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34.5 5.1 29.6 3 24 3 16.3 3 9.6 7.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 45c5.5 0 10.4-2.1 14.1-5.5l-6.5-5.5C29.6 35.9 27 37 24 37c-5.3 0-9.7-3.4-11.3-8l-6.6 5.1C9.5 40.6 16.2 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.2 5.7l6.5 5.5C41.5 36 44 30.5 44 24c0-1.4-.1-2.7-.4-3.5z"/></svg>
+      Sign in with Google
+    </button>
+    <div class="auth-error" id="authError"></div>
+    <div class="auth-setup-notice" id="authSetupNotice" style="display:none;">
+      This app hasn't been connected to a Firebase project yet. Open this file, find <code>FIREBASE_CONFIG</code> near the top of the script, and paste in your Firebase web app config. Also make sure Google sign-in is enabled under Authentication → Sign-in method, and that a Firestore database exists with a rule allowing each user to read/write only <code>/users/{their own uid}</code>.
+    </div>
+  </div>
+</div>
+
+<div class="wrap" id="appWrap" style="display:none;">
+  <header>
+    <div>
+      <h1>💰 Expense Tracker</h1>
+      <p>Science Street LLC · شارع العلوم — everyone's own private expenses</p>
+    </div>
+    <div class="top-actions">
+      <span class="sync-mini"><span class="sync-dot off" id="syncDot"></span><span id="syncStatusText">Not saved online yet</span></span>
+      <button class="btn-ghost" id="exportBtn">Export backup</button>
+      <button class="btn-ghost" id="importBtn">Import backup</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+      <button class="btn-danger" id="clearBtn">Clear all</button>
+      <span class="user-badge" id="userBadge">
+        <img id="userAvatar" src="" alt="">
+        <span class="uname" id="userName"></span>
+      </span>
+      <button class="btn-ghost" id="signOutBtn">Sign out</button>
+    </div>
+  </header>
+
+  <div class="card">
+    <h2>Current Balances</h2>
+    <div class="balances-grid">
+      <div class="balance-tile">
+        <div class="label">🏦 Bank</div>
+        <div class="value" id="bankBalanceValue">EGP 0.00</div>
+        <div class="balance-edit">
+          <input type="number" id="bankBalanceInput" step="0.01" placeholder="Set bank balance">
+          <button type="button" class="btn-ghost" id="setBankBalanceBtn">Set</button>
+        </div>
+      </div>
+      <div class="balance-tile">
+        <div class="label">💵 Cash</div>
+        <div class="value" id="cashBalanceValue">EGP 0.00</div>
+        <div class="balance-edit">
+          <input type="number" id="cashBalanceInput" step="0.01" placeholder="Set cash balance">
+          <button type="button" class="btn-ghost" id="setCashBalanceBtn">Set</button>
+        </div>
+      </div>
+      <div class="balance-tile total">
+        <div class="label">Total available</div>
+        <div class="value" id="totalBalanceValue">EGP 0.00</div>
+        <div class="sub" style="color:var(--text-dim);font-size:0.75rem;margin-top:6px;">Bank + Cash combined</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="stat-card">
+      <div class="label">This month</div>
+      <div class="value neg" id="statMonth">EGP 0.00</div>
+      <div class="sub" id="statMonthLabel">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Total (all time)</div>
+      <div class="value" id="statTotal">EGP 0.00</div>
+      <div class="sub" id="statCount">0 expenses</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Top category</div>
+      <div class="value" id="statTopCat">—</div>
+      <div class="sub" id="statTopCatAmt">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Avg per expense</div>
+      <div class="value" id="statAvg">EGP 0.00</div>
+      <div class="sub">across all time</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 id="formTitle">Add Expense</h2>
+    <form class="expense-form" id="expenseForm">
+      <div class="field">
+        <label for="amount">Amount (EGP)</label>
+        <input type="number" id="amount" step="0.01" min="0" placeholder="0.00" required>
+      </div>
+      <div class="field">
+        <label for="date">Date</label>
+        <input type="date" id="date" required>
+      </div>
+      <div class="field">
+        <label for="category">Category</label>
+        <select id="category">
+          <option>Production &amp; Equipment</option>
+          <option>Software &amp; Subscriptions</option>
+          <option>Transport</option>
+          <option>Food &amp; Drink</option>
+          <option>Team &amp; Freelancers</option>
+          <option>Marketing</option>
+          <option>Utilities</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="paymentMethod">Paid from</label>
+        <select id="paymentMethod">
+          <option value="Cash">Cash</option>
+          <option value="Bank">Bank</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="desc">Description</label>
+        <input type="text" id="desc" placeholder="e.g. Camera lens rental">
+      </div>
+      <div class="field notes">
+        <label for="notes">Notes (optional)</label>
+        <textarea id="notes" rows="2" placeholder="Any extra detail..."></textarea>
+      </div>
+      <div class="field" style="grid-column:1/-1;display:flex;gap:8px;">
+        <button type="submit" class="btn-primary" id="submitBtn">Add Expense</button>
+        <button type="button" class="btn-ghost" id="cancelEditBtn" style="display:none;">Cancel edit</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Breakdown by category (this month)</h2>
+    <div class="breakdown-list" id="breakdownList">
+      <div class="empty-state">No expenses yet this month.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>All expenses</h2>
+    <div class="filters">
+      <div class="field">
+        <label for="filterMonth">Month</label>
+        <input type="month" id="filterMonth">
+      </div>
+      <div class="field">
+        <label for="filterCategory">Category</label>
+        <select id="filterCategory">
+          <option value="">All categories</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="filterSearch">Search</label>
+        <input type="text" id="filterSearch" placeholder="Search description/notes...">
+      </div>
+      <div class="field">
+        <button type="button" class="btn-ghost" id="clearFiltersBtn">Clear filters</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th><th>Category</th><th>Paid from</th><th>Description</th><th>Notes</th><th>Amount</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="expenseTableBody"></tbody>
+      </table>
+    </div>
+    <div id="tableEmptyState" class="empty-state" style="display:none;">No expenses match your filters.</div>
+  </div>
+
+  <footer>Your data is saved to your own private page automatically. Use "Export backup" any time for an extra local copy.</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  // ======================================================================
+  // ONE-TIME SETUP FOR THE APP OWNER (you): paste your Firebase web app
+  // config below, replacing the placeholder object. Every visitor who signs
+  // in with Google will then get their own private page automatically —
+  // they don't need to touch this file or do any setup themselves.
+  //
+  // Firebase console steps:
+  //  1) console.firebase.google.com → your project
+  //  2) Build → Authentication → Sign-in method → enable "Google"
+  //  3) Build → Firestore Database → Create database
+  //  4) Firestore → Rules → paste and Publish:
+  //       rules_version = '2';
+  //       service cloud.firestore {
+  //         match /databases/{database}/documents {
+  //           match /users/{uid} {
+  //             allow read, write: if request.auth != null && request.auth.uid == uid;
+  //           }
+  //         }
+  //       }
+  //  5) Project settings → General → Your apps → Add app (Web) → copy the
+  //     config object here.
+  //  6) Host this file somewhere with a real URL (Firebase Hosting, GitHub
+  //     Pages, Netlify, etc.) — Google sign-in's popup does not work when
+  //     the file is just double-clicked open from disk.
+  // ======================================================================
+  const firebaseConfig = {
+  apiKey: "AIzaSyANY9hZrMPN2og7QmMJo-IRD8UP4TfsoYI",
+  authDomain: "money-tracking-81b34.firebaseapp.com",
+  projectId: "money-tracking-81b34",
+  storageBucket: "money-tracking-81b34.firebasestorage.app",
+  messagingSenderId: "1058238269740",
+  appId: "1:1058238269740:web:20f0cea2008ae5522b8489",
+  measurementId: "G-PW81HSPV1Q"
+};
+
+  var STORAGE_PREFIX = "expenseTracker_v1_";
+  var expenses = [];
+  var balances = {bank:0, cash:0};
+  var editingId = null;
+  var memoryOnly = false;
+  var currentUid = null;
+
+  // ---- Storage layer (localStorage cache, scoped per signed-in user) ----
+  function loadData(){
+    try{
+      var raw = window.localStorage.getItem(STORAGE_PREFIX + currentUid + '_expenses');
+      if(raw) return JSON.parse(raw);
+    }catch(e){
+      memoryOnly = true;
+    }
+    return [];
+  }
+  function saveData(){
+    try{
+      window.localStorage.setItem(STORAGE_PREFIX + currentUid + '_expenses', JSON.stringify(expenses));
+    }catch(e){
+      memoryOnly = true;
+    }
+    pushToCloud();
+  }
+  function loadBalances(){
+    try{
+      var raw = window.localStorage.getItem(STORAGE_PREFIX + currentUid + '_balances');
+      if(raw){
+        var parsed = JSON.parse(raw);
+        return {bank: Number(parsed.bank)||0, cash: Number(parsed.cash)||0};
+      }
+    }catch(e){
+      memoryOnly = true;
+    }
+    return {bank:0, cash:0};
+  }
+  function saveBalances(){
+    try{
+      window.localStorage.setItem(STORAGE_PREFIX + currentUid + '_balances', JSON.stringify(balances));
+    }catch(e){
+      memoryOnly = true;
+    }
+    pushToCloud();
+  }
+  function adjustBalance(method, delta){
+    if(method === 'Bank') balances.bank += delta;
+    else balances.cash += delta;
+    saveBalances();
+  }
+  function renderBalances(){
+    document.getElementById('bankBalanceValue').textContent = fmtMoney(balances.bank);
+    document.getElementById('cashBalanceValue').textContent = fmtMoney(balances.cash);
+    document.getElementById('totalBalanceValue').textContent = fmtMoney(balances.bank + balances.cash);
+  }
+
+  // ---- Utilities ----
+  function uid(){
+    return 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  }
+  function fmtMoney(n){
+    var v = Number(n)||0;
+    return "EGP " + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  function fmtDate(d){
+    var dt = new Date(d + "T00:00:00");
+    if(isNaN(dt.getTime())) return d;
+    return dt.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+  }
+  function monthKey(dateStr){
+    return (dateStr||"").slice(0,7); // YYYY-MM
+  }
+  function currentMonthKey(){
+    var now = new Date();
+    return now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,'0');
+  }
+  function escapeHtml(str){
+    return String(str||"").replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function showToast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+  }
+
+  var CATEGORIES = ["Production & Equipment","Software & Subscriptions","Transport","Food & Drink","Team & Freelancers","Marketing","Utilities","Other"];
+
+  var filterCategorySel = document.getElementById('filterCategory');
+  CATEGORIES.forEach(function(c){
+    var opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    filterCategorySel.appendChild(opt);
+  });
+
+  // ---- Form elements ----
+  var form = document.getElementById('expenseForm');
+  var amountEl = document.getElementById('amount');
+  var dateEl = document.getElementById('date');
+  var categoryEl = document.getElementById('category');
+  var paymentMethodEl = document.getElementById('paymentMethod');
+  var descEl = document.getElementById('desc');
+  var notesEl = document.getElementById('notes');
+  var submitBtn = document.getElementById('submitBtn');
+  var cancelEditBtn = document.getElementById('cancelEditBtn');
+  var formTitle = document.getElementById('formTitle');
+
+  dateEl.value = new Date().toISOString().slice(0,10);
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var amount = parseFloat(amountEl.value);
+    if(isNaN(amount) || amount <= 0){
+      showToast("Enter a valid amount");
+      return;
+    }
+    if(!dateEl.value){
+      showToast("Pick a date");
+      return;
+    }
+
+    var method = paymentMethodEl.value === 'Bank' ? 'Bank' : 'Cash';
+
+    if(editingId){
+      var idx = expenses.findIndex(function(x){ return x.id === editingId; });
+      if(idx > -1){
+        var old = expenses[idx];
+        adjustBalance(old.paymentMethod || 'Cash', old.amount); // reverse old deduction
+        adjustBalance(method, -amount); // apply new deduction
+        expenses[idx] = Object.assign({}, expenses[idx], {
+          amount: amount,
+          date: dateEl.value,
+          category: categoryEl.value,
+          paymentMethod: method,
+          desc: descEl.value.trim(),
+          notes: notesEl.value.trim()
+        });
+      }
+      showToast("Expense updated");
+      exitEditMode();
+    } else {
+      expenses.push({
+        id: uid(),
+        amount: amount,
+        date: dateEl.value,
+        category: categoryEl.value,
+        paymentMethod: method,
+        desc: descEl.value.trim(),
+        notes: notesEl.value.trim(),
+        createdAt: Date.now()
+      });
+      adjustBalance(method, -amount);
+      showToast("Expense added");
+    }
+
+    saveData();
+    form.reset();
+    dateEl.value = new Date().toISOString().slice(0,10);
+    render();
+  });
+
+  cancelEditBtn.addEventListener('click', function(){
+    exitEditMode();
+    form.reset();
+    dateEl.value = new Date().toISOString().slice(0,10);
+  });
+
+  function enterEditMode(id){
+    var exp = expenses.find(function(x){ return x.id === id; });
+    if(!exp) return;
+    editingId = id;
+    amountEl.value = exp.amount;
+    dateEl.value = exp.date;
+    categoryEl.value = exp.category;
+    paymentMethodEl.value = exp.paymentMethod || "Cash";
+    descEl.value = exp.desc || "";
+    notesEl.value = exp.notes || "";
+    formTitle.textContent = "Edit Expense";
+    submitBtn.textContent = "Save Changes";
+    cancelEditBtn.style.display = "inline-block";
+    form.scrollIntoView({behavior:'smooth', block:'center'});
+  }
+  function exitEditMode(){
+    editingId = null;
+    formTitle.textContent = "Add Expense";
+    submitBtn.textContent = "Add Expense";
+    cancelEditBtn.style.display = "none";
+  }
+
+  function deleteExpense(id){
+    var exp = expenses.find(function(x){ return x.id === id; });
+    if(exp) adjustBalance(exp.paymentMethod || 'Cash', exp.amount);
+    expenses = expenses.filter(function(x){ return x.id !== id; });
+    saveData();
+    if(editingId === id) { exitEditMode(); form.reset(); dateEl.value = new Date().toISOString().slice(0,10); }
+    showToast("Expense deleted");
+    render();
+  }
+
+  // ---- Filters ----
+  var filterMonthEl = document.getElementById('filterMonth');
+  var filterSearchEl = document.getElementById('filterSearch');
+  document.getElementById('clearFiltersBtn').addEventListener('click', function(){
+    filterMonthEl.value = "";
+    filterCategorySel.value = "";
+    filterSearchEl.value = "";
+    render();
+  });
+  [filterMonthEl, filterCategorySel, filterSearchEl].forEach(function(el){
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  });
+
+  function getFilteredExpenses(){
+    var month = filterMonthEl.value;
+    var cat = filterCategorySel.value;
+    var q = filterSearchEl.value.trim().toLowerCase();
+    return expenses.filter(function(x){
+      if(month && monthKey(x.date) !== month) return false;
+      if(cat && x.category !== cat) return false;
+      if(q){
+        var hay = ((x.desc||"") + " " + (x.notes||"")).toLowerCase();
+        if(hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    }).sort(function(a,b){ return b.date.localeCompare(a.date) || b.createdAt - a.createdAt; });
+  }
+
+  // ---- Render table ----
+  var tbody = document.getElementById('expenseTableBody');
+  var tableEmptyState = document.getElementById('tableEmptyState');
+
+  function renderTable(){
+    var list = getFilteredExpenses();
+    tbody.innerHTML = "";
+    if(list.length === 0){
+      tableEmptyState.style.display = "block";
+    } else {
+      tableEmptyState.style.display = "none";
+      list.forEach(function(x){
+        var tr = document.createElement('tr');
+        var method = x.paymentMethod || 'Cash';
+        tr.innerHTML =
+          '<td>' + fmtDate(x.date) + '</td>' +
+          '<td><span class="cat-pill">' + escapeHtml(x.category) + '</span></td>' +
+          '<td><span class="method-pill ' + method + '">' + (method==='Bank' ? '🏦 Bank' : '💵 Cash') + '</span></td>' +
+          '<td>' + escapeHtml(x.desc || '—') + '</td>' +
+          '<td>' + escapeHtml(x.notes || '—') + '</td>' +
+          '<td class="amount">' + fmtMoney(x.amount) + '</td>' +
+          '<td><div class="row-actions">' +
+            '<button class="btn-ghost" data-edit="' + x.id + '">Edit</button>' +
+            '<button class="btn-danger" data-del="' + x.id + '">Delete</button>' +
+          '</div></td>';
+        tbody.appendChild(tr);
+      });
+    }
+  }
+
+  tbody.addEventListener('click', function(e){
+    var editId = e.target.getAttribute('data-edit');
+    var delId = e.target.getAttribute('data-del');
+    if(editId) enterEditMode(editId);
+    if(delId){
+      if(confirm("Delete this expense?")) deleteExpense(delId);
+    }
+  });
+
+  // ---- Stats & breakdown ----
+  function renderStats(){
+    var mk = currentMonthKey();
+    var monthTotal = 0, allTotal = 0;
+    var catTotalsMonth = {};
+    expenses.forEach(function(x){
+      allTotal += x.amount;
+      if(monthKey(x.date) === mk){
+        monthTotal += x.amount;
+        catTotalsMonth[x.category] = (catTotalsMonth[x.category]||0) + x.amount;
+      }
+    });
+
+    document.getElementById('statMonth').textContent = fmtMoney(monthTotal);
+    var monthLabel = new Date(mk + "-01T00:00:00").toLocaleDateString('en-US',{month:'long', year:'numeric'});
+    document.getElementById('statMonthLabel').textContent = monthLabel;
+
+    document.getElementById('statTotal').textContent = fmtMoney(allTotal);
+    document.getElementById('statCount').textContent = expenses.length + " expense" + (expenses.length===1?"":"s");
+
+    var topCat = null, topAmt = 0;
+    Object.keys(catTotalsMonth).forEach(function(c){
+      if(catTotalsMonth[c] > topAmt){ topAmt = catTotalsMonth[c]; topCat = c; }
+    });
+    document.getElementById('statTopCat').textContent = topCat || "—";
+    document.getElementById('statTopCatAmt').textContent = topCat ? fmtMoney(topAmt) + " this month" : "No spending yet";
+
+    var avg = expenses.length ? allTotal / expenses.length : 0;
+    document.getElementById('statAvg').textContent = fmtMoney(avg);
+
+    renderBreakdown(catTotalsMonth, monthTotal);
+  }
+
+  function renderBreakdown(catTotals, monthTotal){
+    var container = document.getElementById('breakdownList');
+    var cats = Object.keys(catTotals).sort(function(a,b){ return catTotals[b]-catTotals[a]; });
+    if(cats.length === 0){
+      container.innerHTML = '<div class="empty-state">No expenses yet this month.</div>';
+      return;
+    }
+    container.innerHTML = "";
+    cats.forEach(function(c){
+      var amt = catTotals[c];
+      var pct = monthTotal > 0 ? (amt/monthTotal*100) : 0;
+      var row = document.createElement('div');
+      row.className = 'breakdown-row';
+      row.innerHTML =
+        '<div class="name">' + escapeHtml(c) + '</div>' +
+        '<div class="bar-bg"><div class="bar-fill" style="width:' + pct.toFixed(1) + '%"></div></div>' +
+        '<div class="amt">' + fmtMoney(amt) + '</div>';
+      container.appendChild(row);
+    });
+  }
+
+  function render(){
+    renderTable();
+    renderStats();
+    renderBalances();
+  }
+
+  // ---- Balance set buttons ----
+  document.getElementById('setBankBalanceBtn').addEventListener('click', function(){
+    var v = parseFloat(document.getElementById('bankBalanceInput').value);
+    if(isNaN(v)){ showToast("Enter a valid bank balance"); return; }
+    balances.bank = v;
+    saveBalances();
+    document.getElementById('bankBalanceInput').value = "";
+    renderBalances();
+    showToast("Bank balance set to " + fmtMoney(v));
+  });
+  document.getElementById('setCashBalanceBtn').addEventListener('click', function(){
+    var v = parseFloat(document.getElementById('cashBalanceInput').value);
+    if(isNaN(v)){ showToast("Enter a valid cash balance"); return; }
+    balances.cash = v;
+    saveBalances();
+    document.getElementById('cashBalanceInput').value = "";
+    renderBalances();
+    showToast("Cash balance set to " + fmtMoney(v));
+  });
+
+  // ---- Export / Import ----
+  document.getElementById('exportBtn').addEventListener('click', function(){
+    var payload = {expenses: expenses, balances: balances};
+    var blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    var stamp = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = 'expenses-backup-' + stamp + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("Backup exported");
+  });
+
+  var importFile = document.getElementById('importFile');
+  document.getElementById('importBtn').addEventListener('click', function(){
+    importFile.click();
+  });
+  importFile.addEventListener('change', function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var data = JSON.parse(reader.result);
+        var list, importedBalances = null;
+        if(Array.isArray(data)){
+          list = data; // legacy backup format (array of expenses only)
+        } else if(data && Array.isArray(data.expenses)){
+          list = data.expenses;
+          if(data.balances) importedBalances = data.balances;
+        } else {
+          throw new Error("Invalid format");
+        }
+        var valid = list.filter(function(x){ return x && typeof x.amount === 'number' && x.date; });
+        valid.forEach(function(x){
+          if(!x.id) x.id = uid();
+          if(!x.paymentMethod) x.paymentMethod = 'Cash';
+        });
+        var existingIds = new Set(expenses.map(function(x){return x.id;}));
+        var merged = expenses.concat(valid.filter(function(x){ return !existingIds.has(x.id); }));
+        expenses = merged;
+        saveData();
+        if(importedBalances && confirm("Also restore Bank/Cash balances from this backup? (Overwrites current balances)")){
+          balances = {bank: Number(importedBalances.bank)||0, cash: Number(importedBalances.cash)||0};
+          saveBalances();
+        }
+        render();
+        showToast("Imported " + valid.length + " expense(s)");
+      }catch(err){
+        showToast("Import failed: invalid file");
+      }
+      importFile.value = "";
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', function(){
+    if(expenses.length === 0){ showToast("Nothing to clear"); return; }
+    if(confirm("This will permanently delete all " + expenses.length + " of your expense(s). Export a backup first if needed. Continue?")){
+      expenses = [];
+      saveData();
+      render();
+      showToast("All expenses cleared");
+    }
+  });
+
+  // ======================================================================
+  // Auth + per-user cloud save (Firestore, no manual setup for visitors)
+  // ======================================================================
+  var fbApp = null, fbAuth = null, fbDb = null, fbUnsub = null;
+  var cloudConnected = false, applyingRemote = false, pushTimer = null;
+
+  function setSyncStatus(state, text){
+    var dot = document.getElementById('syncDot');
+    if(!dot) return;
+    dot.className = 'sync-dot ' + state;
+    document.getElementById('syncStatusText').textContent = text;
+  }
+
+  function pushToCloud(immediate){
+    if(!cloudConnected || !fbDb || !currentUid || applyingRemote) return;
+    clearTimeout(pushTimer);
+    var doWrite = function(){
+      setSyncStatus('busy', 'Saving...');
+      fbDb.collection('users').doc(currentUid).set({
+        expenses: expenses, balances: balances, updatedAt: Date.now()
+      }).then(function(){
+        setSyncStatus('on', 'Saved online • ' + new Date().toLocaleTimeString());
+      }).catch(function(err){
+        setSyncStatus('err', 'Save error: ' + err.message);
+      });
+    };
+    if(immediate) doWrite(); else pushTimer = setTimeout(doWrite, 700);
+  }
+
+  function applyRemoteData(data){
+    applyingRemote = true;
+    expenses = Array.isArray(data.expenses) ? data.expenses : [];
+    balances = (data.balances && typeof data.balances === 'object')
+      ? {bank: Number(data.balances.bank)||0, cash: Number(data.balances.cash)||0}
+      : {bank:0, cash:0};
+    saveData();
+    saveBalances();
+    applyingRemote = false;
+    render();
+  }
+
+  function subscribeToUserDoc(u){
+    currentUid = u.uid;
+    expenses = loadData();
+    balances = loadBalances();
+
+    var docRef = fbDb.collection('users').doc(u.uid);
+    docRef.get().then(function(snap){
+      if(snap.exists){
+        applyRemoteData(snap.data());
+      } else {
+        cloudConnected = true;
+        pushToCloud(true);
+      }
+      cloudConnected = true;
+      if(fbUnsub) fbUnsub();
+      fbUnsub = docRef.onSnapshot(function(s){
+        if(!s.exists) return;
+        applyRemoteData(s.data());
+        setSyncStatus('on', 'Saved online • ' + new Date().toLocaleTimeString());
+      }, function(err){
+        setSyncStatus('err', 'Save error: ' + err.message);
+      });
+      render();
+      setSyncStatus('on', 'Saved online • connected');
+    }).catch(function(err){
+      render();
+      setSyncStatus('err', 'Save error: ' + err.message);
+    });
+  }
+
+  function showApp(user){
+    document.getElementById('authGate').style.display = 'none';
+    document.getElementById('appWrap').style.display = 'block';
+    document.getElementById('userAvatar').src = user.photoURL || '';
+    document.getElementById('userAvatar').style.display = user.photoURL ? 'block' : 'none';
+    document.getElementById('userName').textContent = user.displayName || user.email || 'Signed in';
+    subscribeToUserDoc(user);
+  }
+
+  function showGate(){
+    document.getElementById('appWrap').style.display = 'none';
+    document.getElementById('authGate').style.display = 'flex';
+    if(fbUnsub){ fbUnsub(); fbUnsub = null; }
+    cloudConnected = false;
+    currentUid = null;
+    expenses = [];
+    balances = {bank:0, cash:0};
+  }
+
+  var isConfigured = FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== 'REPLACE_ME';
+
+  document.getElementById('googleSignInBtn').addEventListener('click', function(){
+    var errEl = document.getElementById('authError');
+    errEl.textContent = '';
+    if(!isConfigured){
+      document.getElementById('authSetupNotice').style.display = 'block';
+      return;
+    }
+    if(typeof firebase === 'undefined' || !fbAuth){
+      errEl.textContent = "Could not reach Firebase — check your internet connection.";
+      return;
+    }
+    var provider = new firebase.auth.GoogleAuthProvider();
+    fbAuth.signInWithPopup(provider).catch(function(err){
+      if(err && err.code === 'auth/popup-blocked'){
+        errEl.textContent = "Popup blocked — allow popups for this page and try again.";
+      } else if(err && (err.code === 'auth/operation-not-supported-in-this-environment' || err.code === 'auth/unauthorized-domain')){
+        errEl.textContent = "This page needs to be opened from a real web address (not a local file) for Google sign-in to work.";
+      } else {
+        errEl.textContent = "Sign-in failed: " + (err && err.message ? err.message : err);
+      }
+    });
+  });
+
+  document.getElementById('signOutBtn').addEventListener('click', function(){
+    if(fbAuth) fbAuth.signOut();
+  });
+
+  if(isConfigured && typeof firebase !== 'undefined'){
+    try{
+      fbApp = firebase.initializeApp(FIREBASE_CONFIG);
+      fbAuth = fbApp.auth();
+      fbDb = fbApp.firestore();
+      fbAuth.onAuthStateChanged(function(user){
+        if(user){
+          showApp(user);
+        } else {
+          showGate();
+        }
+      });
+    }catch(err){
+      document.getElementById('authError').textContent = "Setup error: " + err.message;
+    }
+  } else {
+    document.getElementById('authSetupNotice').style.display = 'block';
+  }
+
+  if(memoryOnly){
+    showToast("Note: local caching unavailable in this browser — your data still saves online, but won't be available offline");
+  }
+})();
+</script>
+</body>
+</html>
