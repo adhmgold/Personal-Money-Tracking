@@ -281,7 +281,8 @@
         <div class="label">🏦 Bank</div>
         <div class="value" id="bankBalanceValue">EGP 0.00</div>
         <div class="balance-edit">
-          <input type="number" id="bankBalanceInput" step="0.01" placeholder="Set bank balance">
+          <input type="number" id="bankBalanceInput" step="0.01" placeholder="Amount">
+          <button type="button" class="btn-ghost" id="addBankBalanceBtn">Add</button>
           <button type="button" class="btn-ghost" id="setBankBalanceBtn">Set</button>
         </div>
       </div>
@@ -289,7 +290,8 @@
         <div class="label">💵 Cash</div>
         <div class="value" id="cashBalanceValue">EGP 0.00</div>
         <div class="balance-edit">
-          <input type="number" id="cashBalanceInput" step="0.01" placeholder="Set cash balance">
+          <input type="number" id="cashBalanceInput" step="0.01" placeholder="Amount">
+          <button type="button" class="btn-ghost" id="addCashBalanceBtn">Add</button>
           <button type="button" class="btn-ghost" id="setCashBalanceBtn">Set</button>
         </div>
       </div>
@@ -313,21 +315,9 @@
       <div class="sub" id="statCount">0 expenses</div>
     </div>
     <div class="stat-card">
-      <div class="label">Top category</div>
-      <div class="value" id="statTopCat">—</div>
-      <div class="sub" id="statTopCatAmt">—</div>
-    </div>
-    <div class="stat-card">
       <div class="label">Avg per expense</div>
       <div class="value" id="statAvg">EGP 0.00</div>
       <div class="sub">across all time</div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>Breakdown by category (this month)</h2>
-    <div class="breakdown-list" id="breakdownList">
-      <div class="empty-state">No expenses yet this month.</div>
     </div>
   </div>
 
@@ -337,12 +327,6 @@
       <div class="field">
         <label for="filterMonth">Month</label>
         <input type="month" id="filterMonth">
-      </div>
-      <div class="field">
-        <label for="filterCategory">Category</label>
-        <select id="filterCategory">
-          <option value="">All categories</option>
-        </select>
       </div>
       <div class="field">
         <label for="filterSearch">Search</label>
@@ -356,7 +340,7 @@
       <table>
         <thead>
           <tr>
-            <th>Date</th><th>Category</th><th>Paid from</th><th>Description</th><th>Notes</th><th>Amount</th><th></th>
+            <th>Date</th><th>Paid from</th><th>Description</th><th>Notes</th><th>Amount</th><th></th>
           </tr>
         </thead>
         <tbody id="expenseTableBody"></tbody>
@@ -513,15 +497,6 @@
     showToast._timer = setTimeout(function(){ t.classList.remove('show'); }, 2200);
   }
 
-  var CATEGORIES = ["Production & Equipment","Software & Subscriptions","Transport","Food & Drink","Team & Freelancers","Marketing","Utilities","Other"];
-
-  var filterCategorySel = document.getElementById('filterCategory');
-  CATEGORIES.forEach(function(c){
-    var opt = document.createElement('option');
-    opt.value = c; opt.textContent = c;
-    filterCategorySel.appendChild(opt);
-  });
-
   // ---- Form elements ----
   var form = document.getElementById('expenseForm');
   var amountEl = document.getElementById('amount');
@@ -630,22 +605,19 @@
   var filterSearchEl = document.getElementById('filterSearch');
   document.getElementById('clearFiltersBtn').addEventListener('click', function(){
     filterMonthEl.value = "";
-    filterCategorySel.value = "";
     filterSearchEl.value = "";
     render();
   });
-  [filterMonthEl, filterCategorySel, filterSearchEl].forEach(function(el){
+  [filterMonthEl, filterSearchEl].forEach(function(el){
     el.addEventListener('input', render);
     el.addEventListener('change', render);
   });
 
   function getFilteredExpenses(){
     var month = filterMonthEl.value;
-    var cat = filterCategorySel.value;
     var q = filterSearchEl.value.trim().toLowerCase();
     return expenses.filter(function(x){
       if(month && monthKey(x.date) !== month) return false;
-      if(cat && x.category !== cat) return false;
       if(q){
         var hay = ((x.desc||"") + " " + (x.notes||"")).toLowerCase();
         if(hay.indexOf(q) === -1) return false;
@@ -670,7 +642,6 @@
         var method = x.paymentMethod || 'Cash';
         tr.innerHTML =
           '<td>' + fmtDate(x.date) + '</td>' +
-          '<td><span class="cat-pill">' + escapeHtml(x.category) + '</span></td>' +
           '<td><span class="method-pill ' + method + '">' + (method==='Bank' ? '🏦 Bank' : '💵 Cash') + '</span></td>' +
           '<td>' + escapeHtml(x.desc || '—') + '</td>' +
           '<td>' + escapeHtml(x.notes || '—') + '</td>' +
@@ -693,16 +664,14 @@
     }
   });
 
-  // ---- Stats & breakdown ----
+  // ---- Stats ----
   function renderStats(){
     var mk = currentMonthKey();
     var monthTotal = 0, allTotal = 0;
-    var catTotalsMonth = {};
     expenses.forEach(function(x){
       allTotal += x.amount;
       if(monthKey(x.date) === mk){
         monthTotal += x.amount;
-        catTotalsMonth[x.category] = (catTotalsMonth[x.category]||0) + x.amount;
       }
     });
 
@@ -713,38 +682,8 @@
     document.getElementById('statTotal').textContent = fmtMoney(allTotal);
     document.getElementById('statCount').textContent = expenses.length + " expense" + (expenses.length===1?"":"s");
 
-    var topCat = null, topAmt = 0;
-    Object.keys(catTotalsMonth).forEach(function(c){
-      if(catTotalsMonth[c] > topAmt){ topAmt = catTotalsMonth[c]; topCat = c; }
-    });
-    document.getElementById('statTopCat').textContent = topCat || "—";
-    document.getElementById('statTopCatAmt').textContent = topCat ? fmtMoney(topAmt) + " this month" : "No spending yet";
-
     var avg = expenses.length ? allTotal / expenses.length : 0;
     document.getElementById('statAvg').textContent = fmtMoney(avg);
-
-    renderBreakdown(catTotalsMonth, monthTotal);
-  }
-
-  function renderBreakdown(catTotals, monthTotal){
-    var container = document.getElementById('breakdownList');
-    var cats = Object.keys(catTotals).sort(function(a,b){ return catTotals[b]-catTotals[a]; });
-    if(cats.length === 0){
-      container.innerHTML = '<div class="empty-state">No expenses yet this month.</div>';
-      return;
-    }
-    container.innerHTML = "";
-    cats.forEach(function(c){
-      var amt = catTotals[c];
-      var pct = monthTotal > 0 ? (amt/monthTotal*100) : 0;
-      var row = document.createElement('div');
-      row.className = 'breakdown-row';
-      row.innerHTML =
-        '<div class="name">' + escapeHtml(c) + '</div>' +
-        '<div class="bar-bg"><div class="bar-fill" style="width:' + pct.toFixed(1) + '%"></div></div>' +
-        '<div class="amt">' + fmtMoney(amt) + '</div>';
-      container.appendChild(row);
-    });
   }
 
   function render(){
@@ -753,7 +692,7 @@
     renderBalances();
   }
 
-  // ---- Balance set buttons ----
+  // ---- Balance set / add buttons ----
   document.getElementById('setBankBalanceBtn').addEventListener('click', function(){
     var v = parseFloat(document.getElementById('bankBalanceInput').value);
     if(isNaN(v)){ showToast("Enter a valid bank balance"); return; }
@@ -771,6 +710,24 @@
     document.getElementById('cashBalanceInput').value = "";
     renderBalances();
     showToast("Cash balance set to " + fmtMoney(v));
+  });
+  document.getElementById('addBankBalanceBtn').addEventListener('click', function(){
+    var v = parseFloat(document.getElementById('bankBalanceInput').value);
+    if(isNaN(v)){ showToast("Enter a valid amount to add"); return; }
+    balances.bank += v;
+    saveBalances();
+    document.getElementById('bankBalanceInput').value = "";
+    renderBalances();
+    showToast(fmtMoney(v) + " added to bank");
+  });
+  document.getElementById('addCashBalanceBtn').addEventListener('click', function(){
+    var v = parseFloat(document.getElementById('cashBalanceInput').value);
+    if(isNaN(v)){ showToast("Enter a valid amount to add"); return; }
+    balances.cash += v;
+    saveBalances();
+    document.getElementById('cashBalanceInput').value = "";
+    renderBalances();
+    showToast(fmtMoney(v) + " added to cash");
   });
 
   // ---- Export / Import ----
